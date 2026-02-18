@@ -115,7 +115,7 @@ export function renderStatusFragment(state: CameraState): string {
 
   return `<div id="status-${id}"
     hx-get="/api/${id}/status-fragment"
-    hx-trigger="every 5s [!closest('.cam-panel').classList.contains('action-in-progress')]"
+    hx-trigger="every 5s [!this.closest('.cam-panel').classList.contains('action-in-progress')]"
     hx-swap="outerHTML">
     <table class="status-table">${buildStatusRows(state)}</table>
     <div class="panel-actions">
