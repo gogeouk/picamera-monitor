@@ -174,12 +174,15 @@ export function renderPage(states: Map<string, CameraState>): string {
       buttons.forEach(b => { b.disabled = true; });
       const originalHTML = btn.innerHTML;
       btn.innerHTML = '<span class="btn-spinner"></span> ' + originalHTML;
-      // Re-enable after HTMX response (htmx:afterRequest fires on the button)
-      btn.addEventListener('htmx:afterRequest', function handler() {
+      // On success the hx-swap="outerHTML" replaces #body-{id} entirely, so the
+      // spinner disappears naturally when new content arrives. We only need to
+      // manually restore if the request fails (no swap will happen in that case).
+      function restore() {
         buttons.forEach(b => { b.disabled = false; });
         btn.innerHTML = originalHTML;
-        btn.removeEventListener('htmx:afterRequest', handler);
-      }, { once: true });
+      }
+      btn.addEventListener('htmx:responseError', restore, { once: true });
+      btn.addEventListener('htmx:sendError',     restore, { once: true });
     }
     // Activate first tab on load
     showTab('${first.config.id}');
