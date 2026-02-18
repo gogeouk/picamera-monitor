@@ -5,7 +5,7 @@ import http from 'http';
 import { loadConfig } from './config.js';
 import { startPolling, pollOnce } from './poller.js';
 import { runAction } from './ssh.js';
-import { renderPage, renderStatusFragment } from './views.js';
+import { renderPage, renderStatusFragment, renderPanelBody } from './views.js';
 import type { ControlAction } from './types.js';
 
 const config = loadConfig(process.env.CONFIG_FILE);
@@ -108,7 +108,8 @@ app.post('/api/:id/action/:action', async (req, res) => {
     // Force a fresh status poll so the fragment reflects actual current state
     if (pollOnce) await pollOnce(state.config);
     // Re-fetch from map — pollOnce creates a new state object via spread
-    res.send(renderStatusFragment(states.get(state.config.id)!));
+    // Return the full panel body so the stream area updates (e.g. live stream resumes after restart)
+    res.send(renderPanelBody(states.get(state.config.id)!));
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     res.status(500).send(`<div class="error-text">Action failed: ${msg}</div>`);

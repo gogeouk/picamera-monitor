@@ -22,7 +22,7 @@ function actionButtons(id: string, reachable: boolean): string {
   const btn = (action: string, label: string, cls: string) =>
     `<button class="btn ${cls}"
       hx-post="/api/${id}/action/${action}"
-      hx-target="#status-${id}"
+      hx-target="#body-${id}"
       hx-swap="outerHTML"
       onclick="startAction(this)">${label}</button>`;
 
@@ -41,14 +41,12 @@ function actionButtons(id: string, reachable: boolean): string {
   }
 }
 
-function cameraPanel(state: CameraState, active: boolean): string {
-  const { config, status, reachable, last_checked, snapshot_fetched, error } = state;
-  const id = config.id;
+// Shared helpers used by both cameraPanel (initial render) and the exported functions
+function buildStatusRows(state: CameraState): string {
+  const { status, reachable, last_checked, snapshot_fetched, error } = state;
   const checked = last_checked ? last_checked.toLocaleTimeString() : 'never';
   const snapshotTime = snapshot_fetched ? snapshot_fetched.toLocaleTimeString() : null;
-  const snapshotUrl = `/api/${id}/snapshot`;
-
-  const statusRows = reachable && status ? `
+  return reachable && status ? `
     <tr><td>Status</td><td>${statusBadge(true)}</td></tr>
     <tr><td>Uptime</td><td>${formatUptime(status.uptime_seconds)}</td></tr>
     <tr><td>Resolution</td><td>${status.resolution}</td></tr>
@@ -62,9 +60,13 @@ function cameraPanel(state: CameraState, active: boolean): string {
     <tr><td>Last checked</td><td>${checked}</td></tr>
     ${snapshotTime ? `<tr><td>Last snapshot</td><td>${snapshotTime}</td></tr>` : ''}
   `;
+}
 
+function buildMediaPane(state: CameraState): string {
+  const { config, reachable } = state;
+  const snapshotUrl = `/api/${config.id}/snapshot`;
   // Snapshot proxied through our server — avoids browser SSL/CORS issues with Pi certs
-  const mediaPane = reachable
+  return reachable
     ? `<img src="${config.stream_url}" class="stream" alt="${config.name} live stream"
           onerror="this.onerror=null;this.src='${snapshotUrl}?t='+Date.now()">`
     : `<div class="stream-offline">
@@ -72,55 +74,37 @@ function cameraPanel(state: CameraState, active: boolean): string {
               alt="" onerror="this.style.display='none'">
          <p class="offline-label">Stream offline — latest snapshot</p>
        </div>`;
-
-  return `
-  <div class="cam-panel${active ? ' active' : ''}" id="panel-${id}">
-    <div class="panel-body">
-      <div class="col-stream">${mediaPane}</div>
-      <div class="col-status">
-        <div id="status-${id}"
-          hx-get="/api/${id}/status-fragment"
-          hx-trigger="every 5s"
-          hx-swap="outerHTML">
-          <table class="status-table">${statusRows}</table>
-          <div class="panel-actions">
-            ${actionButtons(id, reachable)}
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>`;
 }
 
+// The status column (table + buttons), polled every 5s
 export function renderStatusFragment(state: CameraState): string {
-  const { status, reachable, last_checked, snapshot_fetched, error } = state;
-  const checked = last_checked ? last_checked.toLocaleTimeString() : 'never';
-  const snapshotTime = snapshot_fetched ? snapshot_fetched.toLocaleTimeString() : null;
   const id = state.config.id;
-
-  const rows = reachable && status ? `
-    <tr><td>Status</td><td>${statusBadge(true)}</td></tr>
-    <tr><td>Uptime</td><td>${formatUptime(status.uptime_seconds)}</td></tr>
-    <tr><td>Resolution</td><td>${status.resolution}</td></tr>
-    <tr><td>HDR</td><td>${status.hdr ? '<span class="badge badge-ok">On</span>' : '<span class="badge badge-muted">Off</span>'}</td></tr>
-    <tr><td>Stream clients</td><td>${status.clients}</td></tr>
-    <tr><td>Last checked</td><td>${checked}</td></tr>
-    ${snapshotTime ? `<tr><td>Last snapshot</td><td>${snapshotTime}</td></tr>` : ''}
-  ` : `
-    <tr><td>Status</td><td>${statusBadge(false)}</td></tr>
-    <tr><td>Error</td><td class="error-text">${friendlyError(error)}</td></tr>
-    <tr><td>Last checked</td><td>${checked}</td></tr>
-    ${snapshotTime ? `<tr><td>Last snapshot</td><td>${snapshotTime}</td></tr>` : ''}
-  `;
-
   return `<div id="status-${id}"
     hx-get="/api/${id}/status-fragment"
     hx-trigger="every 5s"
     hx-swap="outerHTML">
-    <table class="status-table">${rows}</table>
+    <table class="status-table">${buildStatusRows(state)}</table>
     <div class="panel-actions">
-      ${actionButtons(id, reachable)}
+      ${actionButtons(id, state.reachable)}
     </div>
+  </div>`;
+}
+
+// The full panel body (stream + status column).
+// Returned by the action handler so the stream area updates after a restart/start.
+export function renderPanelBody(state: CameraState): string {
+  const id = state.config.id;
+  return `<div class="panel-body" id="body-${id}">
+    <div class="col-stream">${buildMediaPane(state)}</div>
+    <div class="col-status">${renderStatusFragment(state)}</div>
+  </div>`;
+}
+
+function cameraPanel(state: CameraState, active: boolean): string {
+  const id = state.config.id;
+  return `
+  <div class="cam-panel${active ? ' active' : ''}" id="panel-${id}">
+    ${renderPanelBody(state)}
   </div>`;
 }
 
