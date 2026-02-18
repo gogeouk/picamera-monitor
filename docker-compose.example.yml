@@ -25,7 +25,7 @@ services:
       - traefik.http.routers.picamera-monitor.rule=Host(`your-subdomain.your-domain.com`)
       - traefik.http.routers.picamera-monitor.tls=true
       - traefik.http.routers.picamera-monitor.tls.certresolver=lets-encrypt
-      - traefik.port=80
+      - traefik.http.services.picamera-monitor.loadbalancer.server.port=3000
     networks:
       - web
 
