@@ -3,7 +3,7 @@ import path from 'path';
 import https from 'https';
 import http from 'http';
 import { loadConfig } from './config.js';
-import { startPolling } from './poller.js';
+import { startPolling, pollOnce } from './poller.js';
 import { runAction } from './ssh.js';
 import { renderPage, renderStatusFragment } from './views.js';
 import type { ControlAction } from './types.js';
@@ -98,12 +98,17 @@ app.post('/api/:id/action/:action', async (req, res) => {
     return res.status(400).send('Invalid action');
   }
 
+  // How long to wait for the service to settle before we poll for updated state.
+  // stop is fast; start/restart/hdr need time for the camera to initialise.
+  const settleMs = action === 'stop' ? 2000 : 10000;
+
   try {
     await runAction(state.config, action);
-    // Brief pause to allow the service to settle before the next poll reflects the change
-    await new Promise(r => setTimeout(r, 1500));
-    // Return a refreshed status fragment
-    res.send(renderStatusFragment(state));
+    await new Promise(r => setTimeout(r, settleMs));
+    // Force a fresh status poll so the fragment reflects actual current state
+    if (pollOnce) await pollOnce(state.config);
+    // Re-fetch from map — pollOnce creates a new state object via spread
+    res.send(renderStatusFragment(states.get(state.config.id)!));
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
     res.status(500).send(`<div class="error-text">Action failed: ${msg}</div>`);

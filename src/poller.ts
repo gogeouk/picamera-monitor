@@ -59,8 +59,14 @@ export function startPolling(cameras: CameraConfig[]): Map<string, CameraState> 
     setInterval(() => poll(cam), POLL_INTERVAL_MS);
   }
 
+  // Exported so the action handler can force a fresh poll after an SSH command
+  pollOnce = poll;
+
   return states;
 }
+
+// Set by startPolling; used externally to refresh a single camera's state
+export let pollOnce: ((cam: import('./types.js').CameraConfig) => Promise<void>) | null = null;
 
 export function formatUptime(seconds: number): string {
   if (seconds < 60) return `${seconds}s`;
