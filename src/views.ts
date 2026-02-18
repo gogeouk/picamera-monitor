@@ -88,6 +88,22 @@ function buildMediaPane(state: CameraState): string {
 // The status column (table + buttons), polled every 5s
 export function renderStatusFragment(state: CameraState): string {
   const id = state.config.id;
+
+  // When online: include a script that auto-recovers the stream area if it's
+  // still showing the offline placeholder (e.g. camera came back without a button press)
+  const streamRecoveryScript = state.reachable ? `
+    <script>(function(){
+      var col = document.getElementById('col-stream-${id}');
+      if (!col || !col.querySelector('.stream-offline')) return;
+      var img = document.createElement('img');
+      img.src = '${state.config.stream_url}';
+      img.className = 'stream';
+      img.alt = '${state.config.name} live stream';
+      img.onerror = function(){ this.onerror=null; this.src='/api/${id}/snapshot?t='+Date.now(); };
+      col.innerHTML = '';
+      col.appendChild(img);
+    })();<\/script>` : '';
+
   return `<div id="status-${id}"
     hx-get="/api/${id}/status-fragment"
     hx-trigger="every 5s"
@@ -96,6 +112,7 @@ export function renderStatusFragment(state: CameraState): string {
     <div class="panel-actions">
       ${actionButtons(id, state.reachable)}
     </div>
+    ${streamRecoveryScript}
   </div>`;
 }
 
@@ -104,7 +121,7 @@ export function renderStatusFragment(state: CameraState): string {
 export function renderPanelBody(state: CameraState): string {
   const id = state.config.id;
   return `<div class="panel-body" id="body-${id}">
-    <div class="col-stream">${buildMediaPane(state)}</div>
+    <div class="col-stream" id="col-stream-${id}">${buildMediaPane(state)}</div>
     <div class="col-status">${renderStatusFragment(state)}</div>
   </div>`;
 }
