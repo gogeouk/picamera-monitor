@@ -174,12 +174,25 @@ export function renderPage(states: Map<string, CameraState>): string {
       buttons.forEach(b => { b.disabled = true; });
       const originalHTML = btn.innerHTML;
       btn.innerHTML = '<span class="btn-spinner"></span> ' + originalHTML;
-      // On success the hx-swap="outerHTML" replaces #body-{id} entirely, so the
-      // spinner disappears naturally when new content arrives. We only need to
-      // manually restore if the request fails (no swap will happen in that case).
+
+      // The status div polls every 5s with hx-swap="outerHTML" and would
+      // replace the spinner mid-action. Pause polling for the duration.
+      const statusDiv = panel.querySelector('[id^="status-"]');
+      if (statusDiv) {
+        statusDiv.removeAttribute('hx-trigger');
+        htmx.process(statusDiv); // cancels the existing interval
+      }
+
+      // On success the action response replaces #body-{id} (outerHTML), which
+      // re-renders a fresh #status-{id} with polling re-enabled — nothing to do.
+      // On error no swap happens, so restore buttons and re-enable polling.
       function restore() {
         buttons.forEach(b => { b.disabled = false; });
         btn.innerHTML = originalHTML;
+        if (statusDiv) {
+          statusDiv.setAttribute('hx-trigger', 'every 5s');
+          htmx.process(statusDiv); // restarts the interval
+        }
       }
       btn.addEventListener('htmx:responseError', restore, { once: true });
       btn.addEventListener('htmx:sendError',     restore, { once: true });
