@@ -1,0 +1,34 @@
+# docker-compose.example.yml — Traefik deployment template
+#
+# Copy to docker-compose.prod.yml, fill in your values, then on the VPS:
+#   git clone <repo> && cd picamera-monitor
+#   cp config.example.yaml config.yaml   # fill in camera details
+#   cp docker-compose.example.yml docker-compose.prod.yml  # fill in domain/port
+#   docker compose -f docker-compose.prod.yml up -d --build
+#
+# docker-compose.prod.yml is gitignored and must never be committed.
+
+services:
+  picamera-monitor:
+    build: .
+    image: picamera-monitor:latest
+    restart: unless-stopped
+    ports:
+      - "3000:3000"       # change the host port if needed to avoid conflicts
+    volumes:
+      - ./config.yaml:/app/config.yaml:ro
+      - ~/.ssh/id_ed25519:/root/.ssh/id_ed25519:ro
+    environment:
+      - NODE_ENV=production
+      - CONFIG_FILE=/app/config.yaml
+    labels:
+      - traefik.http.routers.picamera-monitor.rule=Host(`your-subdomain.your-domain.com`)
+      - traefik.http.routers.picamera-monitor.tls=true
+      - traefik.http.routers.picamera-monitor.tls.certresolver=lets-encrypt
+      - traefik.port=80
+    networks:
+      - web
+
+networks:
+  web:
+    external: true
