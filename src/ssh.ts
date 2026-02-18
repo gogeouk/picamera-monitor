@@ -43,11 +43,12 @@ export async function runAction(config: CameraConfig, action: ControlAction): Pr
   const { service, env_file } = config.pi;
 
   // Helper: upsert an env var in the .env file
-  // Uses sed to replace existing line, or appends if not present
+  // Uses sed to replace existing line, or appends if not present.
+  // printf with a leading \n ensures no corruption if file lacks a trailing newline.
   const setEnvVar = (key: string, value: string) =>
     `grep -q '^${key}=' ${env_file} ` +
     `&& sed -i 's/^${key}=.*/${key}=${value}/' ${env_file} ` +
-    `|| echo '${key}=${value}' >> ${env_file}`;
+    `|| printf '\\n${key}=${value}\\n' >> ${env_file}`;
 
   let command: string;
   switch (action) {
