@@ -40,15 +40,10 @@ function sshExec(config: CameraConfig, command: string): Promise<string> {
 }
 
 export async function runAction(config: CameraConfig, action: ControlAction): Promise<string> {
-  const { service, env_file } = config.pi;
-
-  // Helper: upsert an env var in the .env file
-  // Uses sed to replace existing line, or appends if not present.
-  // printf with a leading \n ensures no corruption if file lacks a trailing newline.
-  const setEnvVar = (key: string, value: string) =>
-    `grep -q '^${key}=' ${env_file} ` +
-    `&& sed -i 's/^${key}=.*/${key}=${value}/' ${env_file} ` +
-    `|| printf '\\n${key}=${value}\\n' >> ${env_file}`;
+  const { service } = config.pi;
+  // Drop-in override dir for this service, e.g. /etc/systemd/system/picamera.service.d
+  const dropInDir = `/etc/systemd/system/${service}.d`;
+  const dropInFile = `${dropInDir}/hdr.conf`;
 
   let command: string;
   switch (action) {
@@ -62,17 +57,20 @@ export async function runAction(config: CameraConfig, action: ControlAction): Pr
       command = `sudo systemctl restart ${service} || true`;
       break;
     case 'hdr_on':
+      // Write a systemd drop-in that sets HDR=1, reload, restart
       command = [
-        `sudo systemctl stop ${service} || true`,
-        setEnvVar('HDR', '1'),
-        `sudo systemctl start ${service} || true`,
+        `sudo mkdir -p ${dropInDir}`,
+        `printf '[Service]\\nEnvironment=HDR=1\\n' | sudo tee ${dropInFile} > /dev/null`,
+        `sudo systemctl daemon-reload`,
+        `sudo systemctl restart ${service}`,
       ].join(' && ');
       break;
     case 'hdr_off':
+      // Remove the drop-in (falls back to .env / default), reload, restart
       command = [
-        `sudo systemctl stop ${service} || true`,
-        setEnvVar('HDR', '0'),
-        `sudo systemctl start ${service} || true`,
+        `sudo rm -f ${dropInFile}`,
+        `sudo systemctl daemon-reload`,
+        `sudo systemctl restart ${service}`,
       ].join(' && ');
       break;
     default:

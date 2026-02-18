@@ -11,7 +11,6 @@ export interface CameraConfig {
     private_key: string;
   };
   pi: {
-    env_file: string;
     service: string;
   };
 }
