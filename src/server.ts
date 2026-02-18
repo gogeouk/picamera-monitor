@@ -98,21 +98,33 @@ app.post('/api/:id/action/:action', async (req, res) => {
     return res.status(400).send('Invalid action');
   }
 
-  // How long to wait for the service to settle before we poll for updated state.
-  // stop is fast; start/restart/hdr need time for the camera to initialise.
-  const settleMs = action === 'stop' ? 2000 : 10000;
-
   try {
     await runAction(state.config, action);
-    await new Promise(r => setTimeout(r, settleMs));
-    // Force a fresh status poll so the fragment reflects actual current state
-    if (pollOnce) await pollOnce(state.config);
-    // Re-fetch from map — pollOnce creates a new state object via spread
-    // Return the full panel body so the stream area updates (e.g. live stream resumes after restart)
+
+    if (action === 'stop') {
+      // Stop is fast — short wait then poll once
+      await new Promise(r => setTimeout(r, 2000));
+      if (pollOnce) await pollOnce(state.config);
+    } else {
+      // start/restart/hdr: camera init can take 10-25s.
+      // Poll every 3s until the camera responds (or 30s timeout).
+      const deadline = Date.now() + 30000;
+      while (Date.now() < deadline) {
+        await new Promise(r => setTimeout(r, 3000));
+        if (pollOnce) await pollOnce(state.config);
+        const current = states.get(state.config.id)!;
+        if (current.reachable) break; // camera is up — respond immediately
+      }
+    }
+
     res.send(renderPanelBody(states.get(state.config.id)!));
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
-    res.status(500).send(`<div class="error-text">Action failed: ${msg}</div>`);
+    // Return a full panel body so HTMX doesn't break the layout
+    if (pollOnce) await pollOnce(state.config).catch(() => {});
+    const current = states.get(state.config.id)!;
+    current.action_error = `Action failed: ${msg}`;
+    res.send(renderPanelBody(current));
   }
 });
 
