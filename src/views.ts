@@ -7,6 +7,40 @@ function statusBadge(reachable: boolean): string {
     : `<span class="badge badge-err">● Offline</span>`;
 }
 
+function friendlyError(err: string | null | undefined): string {
+  if (!err) return 'Unknown';
+  if (err.includes('ECONNREFUSED')) return 'Connection refused (service not running?)';
+  if (err.includes('ETIMEDOUT') || err.includes('ESOCKETTIMEDOUT')) return 'Connection timed out';
+  if (err.includes('socket hang up') || err.includes('ECONNRESET')) return 'Connection dropped (service may be hung — try Restart)';
+  if (err.includes('EHOSTUNREACH') || err.includes('ENETUNREACH')) return 'Host unreachable';
+  if (err.includes('ENOTFOUND')) return 'Hostname not found';
+  if (err.includes('certificate') || err.includes('SSL') || err.includes('CERT')) return 'TLS/cert error';
+  return err;
+}
+
+function actionButtons(id: string, reachable: boolean): string {
+  const btn = (action: string, label: string, cls: string) =>
+    `<button class="btn ${cls}"
+      hx-post="/api/${id}/action/${action}"
+      hx-target="#status-${id}"
+      hx-swap="outerHTML"
+      onclick="startAction(this)">${label}</button>`;
+
+  if (reachable) {
+    return [
+      btn('stop',    'Stop',    'btn-danger'),
+      btn('restart', 'Restart', 'btn-warn'),
+      btn('hdr_on',  'HDR On',  'btn-info'),
+      btn('hdr_off', 'HDR Off', 'btn-muted'),
+    ].join('\n      ');
+  } else {
+    return [
+      btn('start',   'Start',   'btn-ok'),
+      btn('restart', 'Restart', 'btn-warn'),
+    ].join('\n      ');
+  }
+}
+
 function cameraPanel(state: CameraState, active: boolean): string {
   const { config, status, reachable, last_checked, snapshot_fetched, error } = state;
   const id = config.id;
@@ -24,7 +58,7 @@ function cameraPanel(state: CameraState, active: boolean): string {
     ${snapshotTime ? `<tr><td>Last snapshot</td><td>${snapshotTime}</td></tr>` : ''}
   ` : `
     <tr><td>Status</td><td>${statusBadge(false)}</td></tr>
-    <tr><td>Error</td><td class="error-text">${error ?? 'Unknown'}</td></tr>
+    <tr><td>Error</td><td class="error-text">${friendlyError(error)}</td></tr>
     <tr><td>Last checked</td><td>${checked}</td></tr>
     ${snapshotTime ? `<tr><td>Last snapshot</td><td>${snapshotTime}</td></tr>` : ''}
   `;
@@ -36,15 +70,8 @@ function cameraPanel(state: CameraState, active: boolean): string {
     : `<div class="stream-offline">
          <img src="${snapshotUrl}?t=${Date.now()}" class="stream snapshot"
               alt="" onerror="this.style.display='none'">
-         <p class="offline-label">Stream offline</p>
+         <p class="offline-label">Stream offline — latest snapshot</p>
        </div>`;
-
-  const actionBtn = (action: string, label: string, cls = '') =>
-    `<button class="btn ${cls}"
-      hx-post="/api/${id}/action/${action}"
-      hx-target="#status-${id}"
-      hx-swap="outerHTML"
-      onclick="startAction(this)">${label}</button>`;
 
   return `
   <div class="cam-panel${active ? ' active' : ''}" id="panel-${id}">
@@ -56,15 +83,11 @@ function cameraPanel(state: CameraState, active: boolean): string {
           hx-trigger="every 5s"
           hx-swap="outerHTML">
           <table class="status-table">${statusRows}</table>
+          <div class="panel-actions">
+            ${actionButtons(id, reachable)}
+          </div>
         </div>
       </div>
-    </div>
-    <div class="panel-actions" id="actions-${id}">
-      ${actionBtn('stop',    'Stop',    'btn-danger')}
-      ${actionBtn('start',   'Start',   'btn-ok')}
-      ${actionBtn('restart', 'Restart', 'btn-warn')}
-      ${actionBtn('hdr_on',  'HDR On',  'btn-info')}
-      ${actionBtn('hdr_off', 'HDR Off', 'btn-muted')}
     </div>
   </div>`;
 }
@@ -85,7 +108,7 @@ export function renderStatusFragment(state: CameraState): string {
     ${snapshotTime ? `<tr><td>Last snapshot</td><td>${snapshotTime}</td></tr>` : ''}
   ` : `
     <tr><td>Status</td><td>${statusBadge(false)}</td></tr>
-    <tr><td>Error</td><td class="error-text">${error ?? 'Unknown'}</td></tr>
+    <tr><td>Error</td><td class="error-text">${friendlyError(error)}</td></tr>
     <tr><td>Last checked</td><td>${checked}</td></tr>
     ${snapshotTime ? `<tr><td>Last snapshot</td><td>${snapshotTime}</td></tr>` : ''}
   `;
@@ -95,6 +118,9 @@ export function renderStatusFragment(state: CameraState): string {
     hx-trigger="every 5s"
     hx-swap="outerHTML">
     <table class="status-table">${rows}</table>
+    <div class="panel-actions">
+      ${actionButtons(id, reachable)}
+    </div>
   </div>`;
 }
 
