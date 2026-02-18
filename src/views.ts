@@ -106,7 +106,7 @@ export function renderStatusFragment(state: CameraState): string {
 
   return `<div id="status-${id}"
     hx-get="/api/${id}/status-fragment"
-    hx-trigger="every 5s"
+    hx-trigger="every 5s [!closest('.cam-panel').classList.contains('action-in-progress')]"
     hx-swap="outerHTML">
     <table class="status-table">${buildStatusRows(state)}</table>
     <div class="panel-actions">
@@ -166,33 +166,25 @@ export function renderPage(states: Map<string, CameraState>): string {
       document.getElementById('panel-' + id).classList.add('active');
       document.getElementById('tab-' + id).classList.add('active');
     }
-    // Disable all buttons in the panel during an action, show spinner on active btn
+    // Disable all buttons in the panel during an action, show spinner on active btn.
+    // Adding 'action-in-progress' to the panel pauses the status poll because
+    // hx-trigger uses a conditional: "every 5s [!panel.classList.contains(...)]"
     function startAction(btn) {
       const panel = btn.closest('.cam-panel');
       if (!panel) return;
+      panel.classList.add('action-in-progress');
       const buttons = panel.querySelectorAll('.btn');
       buttons.forEach(b => { b.disabled = true; });
       const originalHTML = btn.innerHTML;
       btn.innerHTML = '<span class="btn-spinner"></span> ' + originalHTML;
 
-      // The status div polls every 5s with hx-swap="outerHTML" and would
-      // replace the spinner mid-action. Pause polling for the duration.
-      const statusDiv = panel.querySelector('[id^="status-"]');
-      if (statusDiv) {
-        statusDiv.removeAttribute('hx-trigger');
-        htmx.process(statusDiv); // cancels the existing interval
-      }
-
-      // On success the action response replaces #body-{id} (outerHTML), which
-      // re-renders a fresh #status-{id} with polling re-enabled — nothing to do.
-      // On error no swap happens, so restore buttons and re-enable polling.
+      // On success the action response replaces #body-{id} with fresh HTML
+      // (no 'action-in-progress' class) — spinner and class gone naturally.
+      // On error no swap happens, so restore manually.
       function restore() {
+        panel.classList.remove('action-in-progress');
         buttons.forEach(b => { b.disabled = false; });
         btn.innerHTML = originalHTML;
-        if (statusDiv) {
-          statusDiv.setAttribute('hx-trigger', 'every 5s');
-          htmx.process(statusDiv); // restarts the interval
-        }
       }
       btn.addEventListener('htmx:responseError', restore, { once: true });
       btn.addEventListener('htmx:sendError',     restore, { once: true });
