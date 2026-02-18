@@ -1,0 +1,45 @@
+# picamera-monitor config
+# Copy this to config.yaml and fill in your details.
+# config.yaml is gitignored and must never be committed.
+
+# Port the dashboard web server listens on
+port: 3000
+
+cameras:
+  - id: camera1
+    name: Camera One
+    # Full URL to the camera's /status endpoint
+    status_url: https://your-domain.duckdns.org:8000/status
+    # Full URL for embedding the MJPEG stream
+    stream_url: https://your-domain.duckdns.org:8000/stream.mjpg
+    # Full URL for the fallback snapshot (used when stream is unreachable)
+    snapshot_url: https://your-domain.duckdns.org:8000/current.jpg
+
+    # SSH connection details for control commands
+    ssh:
+      host: your-host.example.com
+      port: 22
+      username: pi
+      # Path to the private key file (no password auth)
+      private_key: ~/.ssh/id_ed25519
+
+    # Paths on the Pi used by control commands
+    pi:
+      env_file: /home/pi/picamera-streamer/.env
+      service: picamera.service
+
+  - id: camera2
+    name: Camera Two
+    status_url: https://your-domain.duckdns.org:8001/status
+    stream_url: https://your-domain.duckdns.org:8001/stream.mjpg
+    snapshot_url: https://your-domain.duckdns.org:8001/current.jpg
+
+    ssh:
+      host: your-host.example.com
+      port: 2222
+      username: pi
+      private_key: ~/.ssh/id_ed25519
+
+    pi:
+      env_file: /home/pi/picamera-streamer/.env
+      service: picamera.service

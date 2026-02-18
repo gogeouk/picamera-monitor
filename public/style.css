@@ -1,0 +1,194 @@
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #0f0f0f;
+  --surface:  #1a1a1a;
+  --border:   #2e2e2e;
+  --ok:       #4caf50;
+  --warn:     #ff9800;
+  --err:      #f44336;
+  --info:     #2196f3;
+  --muted:    #666;
+  --text:     #e0e0e0;
+  --subtext:  #999;
+  --radius:   8px;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+}
+
+header {
+  padding: 16px 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+header h1 {
+  font-size: 1.2rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+
+/* ── Tabs ──────────────────────────────────────────────────────────────────── */
+.tabs {
+  display: flex;
+  gap: 4px;
+  padding: 12px 24px 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: var(--subtext);
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 8px 16px;
+  transition: color 0.15s, border-color 0.15s;
+}
+
+.tab:hover { color: var(--text); }
+.tab.active { color: var(--text); border-bottom-color: var(--info); }
+
+/* ── Camera panel ──────────────────────────────────────────────────────────── */
+.cam-panel { display: none; padding: 24px; }
+.cam-panel.active { display: block; }
+
+.panel-body {
+  display: grid;
+  grid-template-columns: 1fr 280px;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 800px) {
+  .panel-body { grid-template-columns: 1fr; }
+}
+
+/* ── Stream / image ─────────────────────────────────────────────────────────── */
+.col-stream {
+  background: #000;
+  border-radius: var(--radius);
+  overflow: hidden;
+  position: relative;
+  aspect-ratio: 16/9;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.stream {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.stream-offline {
+  width: 100%;
+  height: 100%;
+  position: relative;
+}
+
+.offline-label {
+  position: absolute;
+  bottom: 8px;
+  left: 0;
+  right: 0;
+  text-align: center;
+  color: var(--err);
+  font-size: 0.8rem;
+  background: rgba(0,0,0,0.6);
+  padding: 4px;
+}
+
+/* ── Status table ──────────────────────────────────────────────────────────── */
+.col-status {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px;
+}
+
+.status-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.status-table td {
+  padding: 6px 4px;
+  border-bottom: 1px solid var(--border);
+  vertical-align: middle;
+}
+
+.status-table td:first-child {
+  color: var(--subtext);
+  width: 45%;
+}
+
+.status-table tr:last-child td { border-bottom: none; }
+
+/* ── Badges ─────────────────────────────────────────────────────────────────── */
+.badge {
+  display: inline-block;
+  font-size: 0.8rem;
+  padding: 2px 8px;
+  border-radius: 100px;
+  font-weight: 500;
+}
+
+.badge-ok   { background: rgba(76,175,80,0.15); color: var(--ok); }
+.badge-err  { background: rgba(244,67,54,0.15); color: var(--err); }
+.badge-warn { background: rgba(255,152,0,0.15); color: var(--warn); }
+.badge-info { background: rgba(33,150,243,0.15); color: var(--info); }
+.badge-muted { background: rgba(255,255,255,0.06); color: var(--subtext); }
+
+.error-text { color: var(--err); font-size: 0.8rem; }
+
+/* ── Actions strip ───────────────────────────────────────────────────────────── */
+.panel-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.btn {
+  cursor: pointer;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  padding: 8px 18px;
+  transition: opacity 0.15s;
+}
+
+.btn:hover { opacity: 0.85; }
+.btn:active { opacity: 0.7; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-ok     { background: var(--ok);   color: #fff; }
+.btn-danger { background: var(--err);  color: #fff; }
+.btn-warn   { background: var(--warn); color: #000; }
+.btn-info   { background: var(--info); color: #fff; }
+.btn-muted  { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
+
+/* ── HTMX loading indicator ─────────────────────────────────────────────────── */
+.spinner {
+  display: none;
+  margin-left: 8px;
+  color: var(--subtext);
+  font-size: 1rem;
+  animation: spin 1s linear infinite;
+}
+
+.htmx-request .spinner,
+.htmx-request.spinner { display: inline; }
+
+@keyframes spin { to { transform: rotate(360deg); } }
