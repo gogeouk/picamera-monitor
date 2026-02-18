@@ -25,13 +25,13 @@ function cameraPanel(state: CameraState, active: boolean): string {
     <tr><td>Last checked</td><td>${checked}</td></tr>
   `;
 
-  // Use MJPEG stream when online, fallback to refreshing snapshot when offline
+  // Use MJPEG stream when online, fallback to snapshot when offline
   const mediaPane = reachable
     ? `<img src="${config.stream_url}" class="stream" alt="${config.name} live stream"
-          onerror="this.src='${config.snapshot_url}?t='+Date.now()">`
+          onerror="this.onerror=null;this.src='${config.snapshot_url}?t='+Date.now()">`
     : `<div class="stream-offline">
-         <img src="${config.snapshot_url}?t=${Date.now()}" class="stream snapshot" alt="Last snapshot"
-              onerror="this.src=''">
+         <img src="${config.snapshot_url}?t=${Date.now()}" class="stream snapshot"
+              alt="" onerror="this.style.display='none'">
          <p class="offline-label">Stream offline</p>
        </div>`;
 
@@ -40,7 +40,7 @@ function cameraPanel(state: CameraState, active: boolean): string {
       hx-post="/api/${id}/action/${action}"
       hx-target="#status-${id}"
       hx-swap="outerHTML"
-      hx-indicator="#spinner-${id}">${label}</button>`;
+      onclick="startAction(this)">${label}</button>`;
 
   return `
   <div class="cam-panel${active ? ' active' : ''}" id="panel-${id}">
@@ -53,10 +53,9 @@ function cameraPanel(state: CameraState, active: boolean): string {
           hx-swap="outerHTML">
           <table class="status-table">${statusRows}</table>
         </div>
-        <span id="spinner-${id}" class="htmx-indicator spinner">⟳</span>
       </div>
     </div>
-    <div class="panel-actions">
+    <div class="panel-actions" id="actions-${id}">
       ${actionBtn('stop',    'Stop',    'btn-danger')}
       ${actionBtn('start',   'Start',   'btn-ok')}
       ${actionBtn('restart', 'Restart', 'btn-warn')}
@@ -123,6 +122,21 @@ export function renderPage(states: Map<string, CameraState>): string {
       document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
       document.getElementById('panel-' + id).classList.add('active');
       document.getElementById('tab-' + id).classList.add('active');
+    }
+    // Disable all buttons in the panel during an action, show spinner on active btn
+    function startAction(btn) {
+      const panel = btn.closest('.cam-panel');
+      if (!panel) return;
+      const buttons = panel.querySelectorAll('.btn');
+      buttons.forEach(b => { b.disabled = true; });
+      const originalHTML = btn.innerHTML;
+      btn.innerHTML = '<span class="btn-spinner"></span> ' + originalHTML;
+      // Re-enable after HTMX response (htmx:afterRequest fires on the button)
+      btn.addEventListener('htmx:afterRequest', function handler() {
+        buttons.forEach(b => { b.disabled = false; });
+        btn.innerHTML = originalHTML;
+        btn.removeEventListener('htmx:afterRequest', handler);
+      }, { once: true });
     }
     // Activate first tab on load
     showTab('${first.config.id}');
