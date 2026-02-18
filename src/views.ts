@@ -47,9 +47,12 @@ function buildStatusRows(state: CameraState): string {
   const checked = last_checked ? last_checked.toLocaleTimeString() : 'never';
   const snapshotTime = snapshot_fetched ? snapshot_fetched.toLocaleTimeString() : null;
 
+  // pi_error===null means the probe hasn't run yet (initial state); don't show Offline
   const piRow = pi_reachable && pi_info
     ? `<tr><td>Pi</td><td><span class="badge badge-ok">● Online</span> &nbsp; load&nbsp;${pi_info.load} &nbsp; mem&nbsp;${pi_info.mem_pct}% &nbsp; ${pi_info.temp_c}°C</td></tr>`
-    : `<tr><td>Pi</td><td><span class="badge badge-err">● Offline</span>${pi_error ? ` <span class="error-text-sm">${pi_error}</span>` : ''}</td></tr>`;
+    : pi_error !== null
+      ? `<tr><td>Pi</td><td><span class="badge badge-err">● Offline</span> <details class="err-details"><summary>Details</summary>${pi_error}</details></td></tr>`
+      : `<tr><td>Pi</td><td><span class="badge badge-muted">● Checking…</span></td></tr>`;
 
   return reachable && status ? `
     <tr><td>Camera</td><td>${statusBadge(true)}</td></tr>
@@ -60,14 +63,14 @@ function buildStatusRows(state: CameraState): string {
     <tr><td>Clients</td><td>${status.clients}</td></tr>
     <tr><td>Last checked</td><td>${checked}</td></tr>
     ${snapshotTime ? `<tr><td>Last snapshot</td><td>${snapshotTime}</td></tr>` : ''}
-    ${action_error ? `<tr><td colspan="2" class="error-text">${action_error}</td></tr>` : ''}
+    ${action_error ? `<tr><td colspan="2"><details class="err-details"><summary>Action error</summary>${action_error}</details></td></tr>` : ''}
   ` : `
     <tr><td>Camera</td><td>${statusBadge(false)}</td></tr>
     ${piRow}
-    <tr><td>Error</td><td class="error-text">${friendlyError(error)}</td></tr>
+    <tr><td>Error</td><td><details class="err-details"><summary>Details</summary>${friendlyError(error)}</details></td></tr>
     <tr><td>Last checked</td><td>${checked}</td></tr>
     ${snapshotTime ? `<tr><td>Last snapshot</td><td>${snapshotTime}</td></tr>` : ''}
-    ${action_error ? `<tr><td colspan="2" class="error-text">${action_error}</td></tr>` : ''}
+    ${action_error ? `<tr><td colspan="2"><details class="err-details"><summary>Action error</summary>${action_error}</details></td></tr>` : ''}
   `;
 }
 
