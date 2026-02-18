@@ -52,28 +52,26 @@ export async function runAction(config: CameraConfig, action: ControlAction): Pr
   let command: string;
   switch (action) {
     case 'start':
-      command = `sudo systemctl start ${service}`;
+      command = `sudo systemctl start ${service} || true`;
       break;
     case 'stop':
-      command = `sudo systemctl stop ${service}`;
+      command = `sudo systemctl stop ${service} || true`;
       break;
     case 'restart':
-      command = `sudo systemctl restart ${service}`;
+      command = `sudo systemctl restart ${service} || true`;
       break;
     case 'hdr_on':
-      // Stop service, enable HDR in env, start service
-      // (v4l2-ctl runs automatically at startup via picamera.py)
       command = [
-        `sudo systemctl stop ${service}`,
+        `sudo systemctl stop ${service} || true`,
         setEnvVar('HDR', '1'),
-        `sudo systemctl start ${service}`,
+        `sudo systemctl start ${service} || true`,
       ].join(' && ');
       break;
     case 'hdr_off':
       command = [
-        `sudo systemctl stop ${service}`,
+        `sudo systemctl stop ${service} || true`,
         setEnvVar('HDR', '0'),
-        `sudo systemctl start ${service}`,
+        `sudo systemctl start ${service} || true`,
       ].join(' && ');
       break;
     default:

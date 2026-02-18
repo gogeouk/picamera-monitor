@@ -99,7 +99,8 @@ app.post('/api/:id/action/:action', async (req, res) => {
   }
 
   try {
-    await runAction(state.config, action);
+    const sshResult = await runAction(state.config, action);
+    console.log(`[${state.config.id}] action=${action} ssh_result=${JSON.stringify(sshResult)}`);
 
     if (action === 'stop') {
       // Stop is fast — short wait then poll once
@@ -109,17 +110,21 @@ app.post('/api/:id/action/:action', async (req, res) => {
       // start/restart/hdr: camera init can take 10-25s.
       // Poll every 3s until the camera responds (or 30s timeout).
       const deadline = Date.now() + 30000;
+      let attempts = 0;
       while (Date.now() < deadline) {
         await new Promise(r => setTimeout(r, 3000));
         if (pollOnce) await pollOnce(state.config);
         const current = states.get(state.config.id)!;
-        if (current.reachable) break; // camera is up — respond immediately
+        attempts++;
+        console.log(`[${state.config.id}] poll attempt ${attempts}: reachable=${current.reachable} error=${current.error}`);
+        if (current.reachable) break;
       }
     }
 
     res.send(renderPanelBody(states.get(state.config.id)!));
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);
+    console.error(`[${state.config.id}] action=${action} FAILED: ${msg}`);
     // Return a full panel body so HTMX doesn't break the layout
     if (pollOnce) await pollOnce(state.config).catch(() => {});
     const current = states.get(state.config.id)!;

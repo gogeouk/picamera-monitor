@@ -43,7 +43,7 @@ function actionButtons(id: string, reachable: boolean): string {
 
 // Shared helpers used by both cameraPanel (initial render) and the exported functions
 function buildStatusRows(state: CameraState): string {
-  const { status, reachable, last_checked, snapshot_fetched, error, pi_reachable, pi_info, pi_error } = state;
+  const { status, reachable, last_checked, snapshot_fetched, error, pi_reachable, pi_info, pi_error, action_error } = state;
   const checked = last_checked ? last_checked.toLocaleTimeString() : 'never';
   const snapshotTime = snapshot_fetched ? snapshot_fetched.toLocaleTimeString() : null;
 
@@ -60,12 +60,14 @@ function buildStatusRows(state: CameraState): string {
     <tr><td>Clients</td><td>${status.clients}</td></tr>
     <tr><td>Last checked</td><td>${checked}</td></tr>
     ${snapshotTime ? `<tr><td>Last snapshot</td><td>${snapshotTime}</td></tr>` : ''}
+    ${action_error ? `<tr><td colspan="2" class="error-text">${action_error}</td></tr>` : ''}
   ` : `
     <tr><td>Camera</td><td>${statusBadge(false)}</td></tr>
     ${piRow}
     <tr><td>Error</td><td class="error-text">${friendlyError(error)}</td></tr>
     <tr><td>Last checked</td><td>${checked}</td></tr>
     ${snapshotTime ? `<tr><td>Last snapshot</td><td>${snapshotTime}</td></tr>` : ''}
+    ${action_error ? `<tr><td colspan="2" class="error-text">${action_error}</td></tr>` : ''}
   `;
 }
 
