@@ -47,30 +47,29 @@ function buildStatusRows(state: CameraState): string {
   const checked = last_checked ? last_checked.toLocaleTimeString() : 'never';
   const snapshotTime = snapshot_fetched ? snapshot_fetched.toLocaleTimeString() : null;
 
-  // pi_error===null means the probe hasn't run yet (initial state); don't show Offline
-  const piRow = pi_reachable && pi_info
-    ? `<tr><td>Pi</td><td><span class="badge badge-ok">● Online</span> &nbsp; load&nbsp;${pi_info.load} &nbsp; mem&nbsp;${pi_info.mem_pct}% &nbsp; ${pi_info.temp_c}°C</td></tr>`
-    : pi_error !== null
-      ? `<tr><td>Pi</td><td><span class="badge badge-err">● Offline</span> <details class="err-details"><summary>Details</summary>${pi_error}</details></td></tr>`
-      : `<tr><td>Pi</td><td><span class="badge badge-muted">● Checking…</span></td></tr>`;
+  // Camera second-cell: badge + optional right-aligned error detail
+  const camCell = reachable && status
+    ? `<div class="status-cell">${statusBadge(true)}</div>`
+    : `<div class="status-cell">${statusBadge(false)}<details class="status-detail detail-err"><summary>Error</summary>${friendlyError(error)}</details></div>`;
 
-  return reachable && status ? `
-    <tr><td>Camera</td><td>${statusBadge(true)}</td></tr>
-    ${piRow}
+  // Pi second-cell
+  const piCell = pi_reachable && pi_info
+    ? `<div class="status-cell">${statusBadge(true)}<details class="status-detail"><summary>Details</summary>load&nbsp;${pi_info.load} &nbsp; mem&nbsp;${pi_info.mem_pct}% &nbsp; ${pi_info.temp_c}°C</details></div>`
+    : pi_error !== null
+      ? `<div class="status-cell">${statusBadge(false)}<details class="status-detail detail-err"><summary>Error</summary>${pi_error}</details></div>`
+      : `<div class="status-cell"><span class="badge badge-muted">● Checking…</span></div>`;
+
+  return `
+    <tr><td>Camera</td><td>${camCell}</td></tr>
+    <tr><td>Pi</td><td>${piCell}</td></tr>
+    ${reachable && status ? `
     <tr><td>Uptime</td><td>${formatUptime(status.uptime_seconds)}</td></tr>
     <tr><td>Resolution</td><td>${status.resolution}</td></tr>
     <tr><td>HDR</td><td>${status.hdr ? '<span class="badge badge-ok">On</span>' : '<span class="badge badge-muted">Off</span>'}</td></tr>
-    <tr><td>Clients</td><td>${status.clients}</td></tr>
+    <tr><td>Clients</td><td>${status.clients}</td></tr>` : ''}
     <tr><td>Last checked</td><td>${checked}</td></tr>
     ${snapshotTime ? `<tr><td>Last snapshot</td><td>${snapshotTime}</td></tr>` : ''}
-    ${action_error ? `<tr><td colspan="2"><details class="err-details"><summary>Action error</summary>${action_error}</details></td></tr>` : ''}
-  ` : `
-    <tr><td>Camera</td><td>${statusBadge(false)}</td></tr>
-    ${piRow}
-    <tr><td>Error</td><td><details class="err-details"><summary>Details</summary>${friendlyError(error)}</details></td></tr>
-    <tr><td>Last checked</td><td>${checked}</td></tr>
-    ${snapshotTime ? `<tr><td>Last snapshot</td><td>${snapshotTime}</td></tr>` : ''}
-    ${action_error ? `<tr><td colspan="2"><details class="err-details"><summary>Action error</summary>${action_error}</details></td></tr>` : ''}
+    ${action_error ? `<tr><td colspan="2"><details class="status-detail detail-err"><summary>Action error</summary>${action_error}</details></td></tr>` : ''}
   `;
 }
 

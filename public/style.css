@@ -155,11 +155,13 @@ header h1 {
 
 .error-text { color: var(--err); font-size: 0.8rem; }
 .error-text-sm { color: var(--err); font-size: 0.7rem; opacity: 0.8; }
-.err-details { display: inline; }
-.err-details summary { display: inline; cursor: pointer; color: var(--subtext); font-size: 0.75rem; opacity: 0.7; }
-.err-details summary:hover { opacity: 1; }
-.err-details[open] summary { display: block; margin-bottom: 0.2rem; }
-.err-details[open] { display: block; color: var(--err); font-size: 0.75rem; margin-top: 0.2rem; }
+.status-cell { display: flex; justify-content: space-between; align-items: center; gap: 4px; flex-wrap: wrap; }
+.status-detail summary { cursor: pointer; color: var(--subtext); font-size: 0.75rem; opacity: 0.7; list-style: none; user-select: none; white-space: nowrap; }
+.status-detail summary:hover { opacity: 1; }
+.status-detail summary::-webkit-details-marker { display: none; }
+.status-detail[open] { width: 100%; font-size: 0.75rem; color: var(--subtext); padding-top: 2px; }
+.status-detail.detail-err summary { color: var(--err); opacity: 0.85; }
+.status-detail.detail-err[open] { color: var(--err); }
 
 /* ── Actions strip ───────────────────────────────────────────────────────────── */
 .panel-actions {
