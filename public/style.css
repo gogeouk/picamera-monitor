@@ -191,6 +191,37 @@ header h1 {
 .btn-info   { background: var(--info); color: #fff; }
 .btn-muted  { background: var(--surface); color: var(--text); border: 1px solid var(--border); }
 
+/* ── HDR toggle ──────────────────────────────────────────────────────────────── */
+.hdr-toggle {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+.toggle-track {
+  width: 28px;
+  height: 16px;
+  border-radius: 8px;
+  background: var(--muted);
+  position: relative;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+.hdr-toggle.hdr-on .toggle-track { background: var(--info); }
+.toggle-knob {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: #fff;
+  transition: left 0.2s;
+}
+.hdr-toggle.hdr-on .toggle-knob { left: 14px; }
+
 /* ── Button loading spinner ──────────────────────────────────────────────────── */
 .btn-spinner {
   display: inline-block;

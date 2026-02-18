@@ -18,7 +18,7 @@ function friendlyError(err: string | null | undefined): string {
   return err;
 }
 
-function actionButtons(id: string, reachable: boolean): string {
+function actionButtons(id: string, reachable: boolean, hdrOn: boolean): string {
   const btn = (action: string, label: string, cls: string) =>
     `<button class="btn ${cls}"
       hx-post="/api/${id}/action/${action}"
@@ -26,12 +26,20 @@ function actionButtons(id: string, reachable: boolean): string {
       hx-swap="outerHTML"
       onclick="startAction(this)">${label}</button>`;
 
+  const hdrToggle = `<button class="btn hdr-toggle ${hdrOn ? 'hdr-on' : 'hdr-off'}"
+      hx-post="/api/${id}/action/${hdrOn ? 'hdr_off' : 'hdr_on'}"
+      hx-target="#body-${id}"
+      hx-swap="outerHTML"
+      onclick="startAction(this)">
+      <span class="toggle-track"><span class="toggle-knob"></span></span>
+      HDR
+    </button>`;
+
   if (reachable) {
     return [
       btn('stop',    'Stop',    'btn-danger'),
       btn('restart', 'Restart', 'btn-warn'),
-      btn('hdr_on',  'HDR On',  'btn-info'),
-      btn('hdr_off', 'HDR Off', 'btn-muted'),
+      hdrToggle,
     ].join('\n      ');
   } else {
     return [
@@ -65,7 +73,6 @@ function buildStatusRows(state: CameraState): string {
     ${reachable && status ? `
     <tr><td>Uptime</td><td>${formatUptime(status.uptime_seconds)}</td></tr>
     <tr><td>Resolution</td><td>${status.resolution}</td></tr>
-    <tr><td>HDR</td><td>${status.hdr ? '<span class="badge badge-ok">On</span>' : '<span class="badge badge-muted">Off</span>'}</td></tr>
     <tr><td>Clients</td><td>${status.clients}</td></tr>` : ''}
     <tr><td>Last checked</td><td>${checked}</td></tr>
     ${snapshotTime ? `<tr><td>Last snapshot</td><td>${snapshotTime}</td></tr>` : ''}
@@ -112,7 +119,7 @@ export function renderStatusFragment(state: CameraState): string {
     hx-swap="outerHTML">
     <table class="status-table">${buildStatusRows(state)}</table>
     <div class="panel-actions">
-      ${actionButtons(id, state.reachable)}
+      ${actionButtons(id, state.reachable, state.status?.hdr ?? false)}
     </div>
     ${streamRecoveryScript}
   </div>`;
