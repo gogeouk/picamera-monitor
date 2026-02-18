@@ -37,6 +37,7 @@ export interface CameraState {
   status: CameraStatus | null;
   reachable: boolean;
   last_checked: Date | null;
+  snapshot_fetched: Date | null;
   error: string | null;
 }
 

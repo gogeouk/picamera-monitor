@@ -32,6 +32,7 @@ export function startPolling(cameras: CameraConfig[]): Map<string, CameraState> 
       status: null,
       reachable: false,
       last_checked: null,
+      snapshot_fetched: null,
       error: null,
     });
   }

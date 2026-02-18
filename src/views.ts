@@ -8,9 +8,11 @@ function statusBadge(reachable: boolean): string {
 }
 
 function cameraPanel(state: CameraState, active: boolean): string {
-  const { config, status, reachable, last_checked, error } = state;
+  const { config, status, reachable, last_checked, snapshot_fetched, error } = state;
   const id = config.id;
   const checked = last_checked ? last_checked.toLocaleTimeString() : 'never';
+  const snapshotTime = snapshot_fetched ? snapshot_fetched.toLocaleTimeString() : null;
+  const snapshotUrl = `/api/${id}/snapshot`;
 
   const statusRows = reachable && status ? `
     <tr><td>Status</td><td>${statusBadge(true)}</td></tr>
@@ -19,18 +21,20 @@ function cameraPanel(state: CameraState, active: boolean): string {
     <tr><td>HDR</td><td>${status.hdr ? '<span class="badge badge-ok">On</span>' : '<span class="badge badge-muted">Off</span>'}</td></tr>
     <tr><td>Stream clients</td><td>${status.clients}</td></tr>
     <tr><td>Last checked</td><td>${checked}</td></tr>
+    ${snapshotTime ? `<tr><td>Last snapshot</td><td>${snapshotTime}</td></tr>` : ''}
   ` : `
     <tr><td>Status</td><td>${statusBadge(false)}</td></tr>
     <tr><td>Error</td><td class="error-text">${error ?? 'Unknown'}</td></tr>
     <tr><td>Last checked</td><td>${checked}</td></tr>
+    ${snapshotTime ? `<tr><td>Last snapshot</td><td>${snapshotTime}</td></tr>` : ''}
   `;
 
-  // Use MJPEG stream when online, fallback to snapshot when offline
+  // Snapshot proxied through our server — avoids browser SSL/CORS issues with Pi certs
   const mediaPane = reachable
     ? `<img src="${config.stream_url}" class="stream" alt="${config.name} live stream"
-          onerror="this.onerror=null;this.src='${config.snapshot_url}?t='+Date.now()">`
+          onerror="this.onerror=null;this.src='${snapshotUrl}?t='+Date.now()">`
     : `<div class="stream-offline">
-         <img src="${config.snapshot_url}?t=${Date.now()}" class="stream snapshot"
+         <img src="${snapshotUrl}?t=${Date.now()}" class="stream snapshot"
               alt="" onerror="this.style.display='none'">
          <p class="offline-label">Stream offline</p>
        </div>`;
@@ -66,8 +70,9 @@ function cameraPanel(state: CameraState, active: boolean): string {
 }
 
 export function renderStatusFragment(state: CameraState): string {
-  const { status, reachable, last_checked, error } = state;
+  const { status, reachable, last_checked, snapshot_fetched, error } = state;
   const checked = last_checked ? last_checked.toLocaleTimeString() : 'never';
+  const snapshotTime = snapshot_fetched ? snapshot_fetched.toLocaleTimeString() : null;
   const id = state.config.id;
 
   const rows = reachable && status ? `
@@ -77,10 +82,12 @@ export function renderStatusFragment(state: CameraState): string {
     <tr><td>HDR</td><td>${status.hdr ? '<span class="badge badge-ok">On</span>' : '<span class="badge badge-muted">Off</span>'}</td></tr>
     <tr><td>Stream clients</td><td>${status.clients}</td></tr>
     <tr><td>Last checked</td><td>${checked}</td></tr>
+    ${snapshotTime ? `<tr><td>Last snapshot</td><td>${snapshotTime}</td></tr>` : ''}
   ` : `
     <tr><td>Status</td><td>${statusBadge(false)}</td></tr>
     <tr><td>Error</td><td class="error-text">${error ?? 'Unknown'}</td></tr>
     <tr><td>Last checked</td><td>${checked}</td></tr>
+    ${snapshotTime ? `<tr><td>Last snapshot</td><td>${snapshotTime}</td></tr>` : ''}
   `;
 
   return `<div id="status-${id}"
