@@ -1,6 +1,6 @@
 import { Client } from 'ssh2';
 import fs from 'fs';
-import type { CameraConfig, ControlAction } from './types.js';
+import type { CameraConfig, ControlAction, PiInfo } from './types.js';
 
 function sshExec(config: CameraConfig, command: string): Promise<string> {
   return new Promise((resolve, reject) => {
@@ -33,6 +33,8 @@ function sshExec(config: CameraConfig, command: string): Promise<string> {
         port: config.ssh.port,
         username: config.ssh.username,
         privateKey: fs.readFileSync(config.ssh.private_key),
+        // Accept any host key — Pi uses self-signed or DuckDNS cert, not in known_hosts
+        hostVerifier: () => true,
       });
   });
 }
@@ -81,6 +83,15 @@ export async function runAction(config: CameraConfig, action: ControlAction): Pr
   return sshExec(config, command);
 }
 
-export async function getServiceStatus(config: CameraConfig): Promise<string> {
-  return sshExec(config, `systemctl is-active ${config.pi.service} 2>&1 || true`);
+// Probe Pi system stats via SSH: load, memory %, CPU temp
+// Returns a single pipe-delimited line: "load|mem_pct|temp_c"
+export async function probePi(config: CameraConfig): Promise<PiInfo> {
+  const cmd = `echo "$(awk '{print $1}' /proc/loadavg)|$(free | awk '/Mem:/ {printf "%d", $3/$2*100}')|$(vcgencmd measure_temp 2>/dev/null | grep -oP '[\\d.]+' || echo 0)"`;
+  const raw = await sshExec(config, cmd);
+  const [load, memStr, tempStr] = raw.split('|');
+  return {
+    load: load?.trim() ?? '?',
+    mem_pct: parseInt(memStr ?? '0', 10),
+    temp_c: parseFloat(tempStr ?? '0'),
+  };
 }

@@ -1,6 +1,7 @@
 import https from 'https';
 import http from 'http';
 import type { CameraState, CameraStatus, CameraConfig } from './types.js';
+import { probePi } from './ssh.js';
 
 const POLL_INTERVAL_MS = 5000;
 const FETCH_TIMEOUT_MS = 4000;
@@ -34,21 +35,42 @@ export function startPolling(cameras: CameraConfig[]): Map<string, CameraState> 
       last_checked: null,
       snapshot_fetched: null,
       error: null,
+      pi_reachable: false,
+      pi_info: null,
+      pi_error: null,
+      action_error: null,
     });
   }
 
   async function poll(cam: CameraConfig) {
     const state = states.get(cam.id)!;
-    try {
-      const status = await fetchStatus(cam.status_url);
-      state.status = status;
+
+    // Run camera HTTP poll and Pi SSH probe in parallel
+    const [camResult, piResult] = await Promise.allSettled([
+      fetchStatus(cam.status_url),
+      probePi(cam),
+    ]);
+
+    if (camResult.status === 'fulfilled') {
+      state.status = camResult.value;
       state.reachable = true;
       state.error = null;
-    } catch (err: unknown) {
+    } else {
       state.reachable = false;
       state.status = null;
-      state.error = err instanceof Error ? err.message : String(err);
+      state.error = camResult.reason instanceof Error ? camResult.reason.message : String(camResult.reason);
     }
+
+    if (piResult.status === 'fulfilled') {
+      state.pi_info = piResult.value;
+      state.pi_reachable = true;
+      state.pi_error = null;
+    } else {
+      state.pi_reachable = false;
+      state.pi_info = null;
+      state.pi_error = piResult.reason instanceof Error ? piResult.reason.message : String(piResult.reason);
+    }
+
     state.last_checked = new Date();
     states.set(cam.id, { ...state });
   }

@@ -43,19 +43,26 @@ function actionButtons(id: string, reachable: boolean): string {
 
 // Shared helpers used by both cameraPanel (initial render) and the exported functions
 function buildStatusRows(state: CameraState): string {
-  const { status, reachable, last_checked, snapshot_fetched, error } = state;
+  const { status, reachable, last_checked, snapshot_fetched, error, pi_reachable, pi_info, pi_error } = state;
   const checked = last_checked ? last_checked.toLocaleTimeString() : 'never';
   const snapshotTime = snapshot_fetched ? snapshot_fetched.toLocaleTimeString() : null;
+
+  const piRow = pi_reachable && pi_info
+    ? `<tr><td>Pi</td><td><span class="badge badge-ok">● Online</span> &nbsp; load&nbsp;${pi_info.load} &nbsp; mem&nbsp;${pi_info.mem_pct}% &nbsp; ${pi_info.temp_c}°C</td></tr>`
+    : `<tr><td>Pi</td><td><span class="badge badge-err">● Offline</span>${pi_error ? ` <span class="error-text-sm">${pi_error}</span>` : ''}</td></tr>`;
+
   return reachable && status ? `
-    <tr><td>Status</td><td>${statusBadge(true)}</td></tr>
+    <tr><td>Camera</td><td>${statusBadge(true)}</td></tr>
+    ${piRow}
     <tr><td>Uptime</td><td>${formatUptime(status.uptime_seconds)}</td></tr>
     <tr><td>Resolution</td><td>${status.resolution}</td></tr>
     <tr><td>HDR</td><td>${status.hdr ? '<span class="badge badge-ok">On</span>' : '<span class="badge badge-muted">Off</span>'}</td></tr>
-    <tr><td>Stream clients</td><td>${status.clients}</td></tr>
+    <tr><td>Clients</td><td>${status.clients}</td></tr>
     <tr><td>Last checked</td><td>${checked}</td></tr>
     ${snapshotTime ? `<tr><td>Last snapshot</td><td>${snapshotTime}</td></tr>` : ''}
   ` : `
-    <tr><td>Status</td><td>${statusBadge(false)}</td></tr>
+    <tr><td>Camera</td><td>${statusBadge(false)}</td></tr>
+    ${piRow}
     <tr><td>Error</td><td class="error-text">${friendlyError(error)}</td></tr>
     <tr><td>Last checked</td><td>${checked}</td></tr>
     ${snapshotTime ? `<tr><td>Last snapshot</td><td>${snapshotTime}</td></tr>` : ''}
