@@ -1,14 +1,20 @@
-FROM node:20-alpine
-
+# Build stage — compiles TypeScript
+FROM node:20-alpine AS builder
 WORKDIR /app
+COPY package*.json ./
+RUN npm ci
+COPY tsconfig.json ./
+COPY src/ ./src/
+RUN npm run build
 
+# Runtime stage — lean image with only compiled output
+FROM node:20-alpine
+WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev
-
-COPY dist/ ./dist/
+COPY --from=builder /app/dist/ ./dist/
 COPY public/ ./public/
 
 ENV NODE_ENV=production
-
 EXPOSE 3000
 CMD ["node", "dist/server.js"]
