@@ -54,3 +54,20 @@ export interface CameraState {
 }
 
 export type ControlAction = 'start' | 'stop' | 'restart' | 'hdr_on' | 'hdr_off';
+
+// The client-facing view of CameraState. Deliberately omits `config` — it carries
+// SSH host, port, username and key path, and the dashboard is unauthenticated.
+// Build this with toPublicState() in redact.ts; never send a CameraState directly.
+export interface PublicCameraState {
+  id: string;
+  name: string;
+  status: CameraStatus | null;
+  reachable: boolean;
+  last_checked: Date | null;
+  snapshot_fetched: Date | null;
+  error: string | null;
+  pi_reachable: boolean;
+  pi_info: PiInfo | null;
+  pi_error: string | null;
+  action_error: string | null;
+}

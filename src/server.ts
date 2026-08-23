@@ -6,6 +6,7 @@ import { loadConfig } from './config.js';
 import { startPolling, pollOnce } from './poller.js';
 import { runAction } from './ssh.js';
 import { renderPage, renderStatusFragment, renderPanelBody } from './views.js';
+import { toPublicState } from './redact.js';
 import type { ControlAction } from './types.js';
 
 const config = loadConfig(process.env.CONFIG_FILE);
@@ -80,11 +81,13 @@ app.get('/api/:id/status-fragment', (req, res) => {
 app.get('/api/:id/status', (req, res) => {
   const state = states.get(req.params.id);
   if (!state) return res.status(404).json({ error: 'Camera not found' });
-  res.json(state);
+  res.json(toPublicState(state));
 });
 
 app.get('/api/cameras', (_req, res) => {
-  res.json(Object.fromEntries(states));
+  res.json(Object.fromEntries(
+    Array.from(states, ([id, state]) => [id, toPublicState(state)])
+  ));
 });
 
 // ── Control actions ───────────────────────────────────────────────────────────
