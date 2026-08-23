@@ -31,7 +31,34 @@ docker-compose.yml   — Mounts ./config.yaml and ~/.ssh/id_ed25519 as read-only
 
 **Self-signed certs tolerated.** The poller uses `rejectUnauthorized: false` when fetching the Pi's `/status` endpoint. This is intentional: the Pi cert is Let's Encrypt but may be self-signed in dev; the Pi streams are internal infrastructure not first-party API calls.
 
-**No auth on the dashboard.** The dashboard is intended to run on a private network or VPS behind a reverse proxy. Add HTTP Basic Auth at the nginx/Caddy level if exposing publicly.
+**No auth on the dashboard.** The dashboard has no authentication of its own and is currently reachable at `cams.gogeo.uk`. Basic Auth belongs at the Traefik/nginx layer — see *Security invariants* below.
+
+## Security invariants
+
+The dashboard and its JSON API are **unauthenticated**. Treat every response as public.
+
+**Never send a `CameraState` to a client.** It embeds the full `CameraConfig`, including
+`ssh.host`, `ssh.port`, `ssh.username` and `ssh.private_key`. Convert with `toPublicState()`
+from `src/redact.ts` first — it returns `PublicCameraState`, which carries `id` and `name` in
+place of `config`. `/api/cameras` and `/api/:id/status` both go through it.
+
+**Never render an error message raw.** SSH and socket errors embed the host, port, username
+and key path (`connect ECONNREFUSED pi.example.com:8022`). `views.ts` passes `error`,
+`pi_error` and `action_error` through `redactError()` before rendering. Note the replacement
+order in `redact.ts` matters: the key path usually contains the username, so it must be
+substituted first, and the username match is whole-word so a user called `pi` does not turn
+`picamera.service` into `<user>camera.service`.
+
+**Escape everything interpolated into HTML.** Use `esc()` in `views.ts`. The Pi's `/status`
+JSON is fetched with `rejectUnauthorized: false` and SSH probe output is shell-derived, so
+neither is trusted input. `status.resolution` reaching the page unescaped was a stored-XSS
+path.
+
+Camera stream and snapshot URLs are *not* secret — they are already embedded in the public
+weather site — so they stay in responses deliberately.
+
+**Still outstanding:** Basic Auth at Traefik, and `hostVerifier: () => true` in `ssh.ts`
+disables SSH host key verification entirely.
 
 ## Development
 

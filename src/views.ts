@@ -1,5 +1,20 @@
 import type { CameraState } from './types.js';
 import { formatUptime } from './poller.js';
+import { redactError } from './redact.js';
+
+/**
+ * Escape anything interpolated into HTML. Several values reaching these templates
+ * originate outside our process — the Pi's /status JSON (fetched with
+ * rejectUnauthorized:false) and stderr from SSH commands — so none of it is trusted.
+ */
+function esc(value: unknown): string {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
 
 function statusBadge(reachable: boolean): string {
   return reachable
@@ -51,20 +66,25 @@ function actionButtons(id: string, reachable: boolean, hdrOn: boolean): string {
 
 // Shared helpers used by both cameraPanel (initial render) and the exported functions
 function buildStatusRows(state: CameraState): string {
-  const { status, reachable, last_checked, snapshot_fetched, error, pi_reachable, pi_info, pi_error, action_error } = state;
+  const { status, reachable, last_checked, snapshot_fetched, pi_reachable, pi_info } = state;
+
+  // These are rendered into an unauthenticated page; scrub SSH host/port/user first.
+  const error = redactError(state.error, state.config);
+  const pi_error = redactError(state.pi_error, state.config);
+  const action_error = redactError(state.action_error, state.config);
   const checked = last_checked ? last_checked.toLocaleTimeString() : 'never';
   const snapshotTime = snapshot_fetched ? snapshot_fetched.toLocaleTimeString() : null;
 
   // Camera second-cell: badge + optional right-aligned error detail
   const camCell = reachable && status
     ? `<div class="status-cell">${statusBadge(true)}</div>`
-    : `<div class="status-cell">${statusBadge(false)}<details class="status-detail detail-err"><summary>Error</summary>${friendlyError(error)}</details></div>`;
+    : `<div class="status-cell">${statusBadge(false)}<details class="status-detail detail-err"><summary>Error</summary>${esc(friendlyError(error))}</details></div>`;
 
   // Pi second-cell
   const piCell = pi_reachable && pi_info
-    ? `<div class="status-cell">${statusBadge(true)}<details class="status-detail"><summary>Details</summary>load&nbsp;${pi_info.load} &nbsp; mem&nbsp;${pi_info.mem_pct}% &nbsp; ${pi_info.temp_c}°C</details></div>`
+    ? `<div class="status-cell">${statusBadge(true)}<details class="status-detail"><summary>Details</summary>load&nbsp;${esc(pi_info.load)} &nbsp; mem&nbsp;${esc(pi_info.mem_pct)}% &nbsp; ${esc(pi_info.temp_c)}°C</details></div>`
     : pi_error !== null
-      ? `<div class="status-cell">${statusBadge(false)}<details class="status-detail detail-err"><summary>Error</summary>${pi_error}</details></div>`
+      ? `<div class="status-cell">${statusBadge(false)}<details class="status-detail detail-err"><summary>Error</summary>${esc(pi_error)}</details></div>`
       : `<div class="status-cell"><span class="badge badge-muted">● Checking…</span></div>`;
 
   return `
@@ -72,11 +92,11 @@ function buildStatusRows(state: CameraState): string {
     <tr><td>Pi</td><td>${piCell}</td></tr>
     ${reachable && status ? `
     <tr><td>Uptime</td><td>${formatUptime(status.uptime_seconds)}</td></tr>
-    <tr><td>Resolution</td><td>${status.resolution}</td></tr>
-    <tr><td>Clients</td><td>${status.clients}</td></tr>` : ''}
+    <tr><td>Resolution</td><td>${esc(status.resolution)}</td></tr>
+    <tr><td>Clients</td><td>${esc(status.clients)}</td></tr>` : ''}
     <tr><td>Last checked</td><td>${checked}</td></tr>
     ${snapshotTime ? `<tr><td>Last snapshot</td><td>${snapshotTime}</td></tr>` : ''}
-    ${action_error ? `<tr><td colspan="2"><details class="status-detail detail-err"><summary>Action error</summary>${action_error}</details></td></tr>` : ''}
+    ${action_error ? `<tr><td colspan="2"><details class="status-detail detail-err"><summary>Action error</summary>${esc(action_error)}</details></td></tr>` : ''}
   `;
 }
 
