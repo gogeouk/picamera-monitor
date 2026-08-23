@@ -81,6 +81,27 @@ If you add a new config key you must update both `config.example.yaml` (with a g
 
 Add a new entry to `config.yaml` following the structure in `config.example.yaml`. Give it a unique `id` (used in URLs). No code changes needed.
 
+## Where this is deployed
+
+`cams.gogeo.uk` runs on **`ontoast.uk`** (`173.249.44.95`) — *not* `upcode.uk`, which is a
+separate Dokku box. Straight Docker + Traefik v2.2 there.
+
+| | |
+|---|---|
+| Host | `ontoast.uk` (in `~/.ssh/config`, key auth) |
+| Directory | `/home/lee/docker/picamera-monitor` |
+| Compose file | `docker-compose.prod.yml` |
+| Remote | `origin` → `github.com/gogeouk/picamera-monitor`, tracking `main` |
+
+Deploy:
+
+```bash
+ssh ontoast.uk 'cd /home/lee/docker/picamera-monitor && git pull --ff-only \
+  && docker compose -f docker-compose.prod.yml up -d --build'
+```
+
+`config.yaml` and the SSH key are mounted volumes and are not touched by a rebuild.
+
 ## Production
 
 ```bash
