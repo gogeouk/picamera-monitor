@@ -31,7 +31,7 @@ docker-compose.yml   — Mounts ./config.yaml and ~/.ssh/id_ed25519 as read-only
 
 **Self-signed certs tolerated.** The poller uses `rejectUnauthorized: false` when fetching the Pi's `/status` endpoint. This is intentional: the Pi cert is Let's Encrypt but may be self-signed in dev; the Pi streams are internal infrastructure not first-party API calls.
 
-**No auth on the dashboard.** The dashboard has no authentication of its own and is currently reachable at `cams.gogeo.uk`. Basic Auth belongs at the Traefik/nginx layer — see *Security invariants* below.
+**Password at Traefik, nothing in the app.** Since 2026-09-21 `cams.gogeo.uk` is behind Traefik Basic Auth (the `cams-auth` middleware in the server's `docker-compose.prod.yml`). The app itself has no login, so it must never be published on a host port that bypasses Traefik.
 
 ## Security invariants
 
@@ -57,7 +57,14 @@ path.
 Camera stream and snapshot URLs are *not* secret — they are already embedded in the public
 weather site — so they stay in responses deliberately.
 
-**Still outstanding:** Basic Auth at Traefik, and `hostVerifier: () => true` in `ssh.ts`
+**SSH, since 2026-09-21:**
+
+- **The dashboard has its own key**, `secrets/monitor_ed25519` on the server (gitignored). Until then it mounted lee's personal key, which has passwordless root on both Pis, into this web-facing container.
+- **On the Pis that key is fenced** by `monitor-gate.sh` (in picamera-streamer), a forced command in `authorized_keys`. It can run `probe`, `start`, `stop`, `restart`, `hdr-on` and `hdr-off`, nothing else. `ssh.ts` therefore sends those verbs, never shell. A new ability means a new verb in the gate.
+- **Host keys are pinned** (`ssh.host_keys` in `config.yaml`). No pins means no connection.
+- **Actions refuse cross-site requests** (`src/guard.ts`): browsers resend a saved Basic Auth password to this site even when another website triggers the request, so the action route insists on HTMX's `HX-Request` header and a same-origin `Origin`.
+
+**Still outstanding:** HTMX is loaded from unpkg without a subresource-integrity hash.
 disables SSH host key verification entirely.
 
 ## Development

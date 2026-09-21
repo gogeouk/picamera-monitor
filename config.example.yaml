@@ -21,7 +21,14 @@ cameras:
       port: 22
       username: pi
       # Path to the private key file (no password auth)
-      private_key: ~/.ssh/id_ed25519
+      # The dashboard's own key, fenced on the Pi by monitor-gate.sh (see AGENTS.md)
+      private_key: /root/.ssh/monitor_ed25519
+      # The Pi's host key fingerprints; any other host is refused. Read them ON the Pi:
+      #   for f in /etc/ssh/ssh_host_*_key.pub; do ssh-keygen -lf $f; done
+      host_keys:
+        - SHA256:replace-with-ed25519-fingerprint
+        - SHA256:replace-with-ecdsa-fingerprint
+        - SHA256:replace-with-rsa-fingerprint
 
     # Paths on the Pi used by control commands
     pi:
@@ -38,7 +45,14 @@ cameras:
       host: your-host.example.com
       port: 2222
       username: pi
-      private_key: ~/.ssh/id_ed25519
+      # The dashboard's own key, fenced on the Pi by monitor-gate.sh (see AGENTS.md)
+      private_key: /root/.ssh/monitor_ed25519
+      # The Pi's host key fingerprints; any other host is refused. Read them ON the Pi:
+      #   for f in /etc/ssh/ssh_host_*_key.pub; do ssh-keygen -lf $f; done
+      host_keys:
+        - SHA256:replace-with-ed25519-fingerprint
+        - SHA256:replace-with-ecdsa-fingerprint
+        - SHA256:replace-with-rsa-fingerprint
 
     pi:
       env_file: /home/pi/picamera-streamer/.env
