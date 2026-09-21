@@ -13,11 +13,15 @@ services:
     build: .
     image: picamera-monitor:latest
     restart: unless-stopped
-    ports:
-      - "3000:3000"       # change the host port if needed to avoid conflicts
+    # No published port: Traefik reaches the app over the `web` network, and a host
+    # port would bypass the password below.
     volumes:
       - ./config.yaml:/app/config.yaml:ro
-      - ~/.ssh/id_ed25519:/root/.ssh/id_ed25519:ro
+      # The dashboard's OWN key, never a personal one. On each Pi it is installed as
+      #   restrict,command="/home/<user>/picamera-streamer/monitor-gate.sh" <pubkey>
+      # so it can only probe, start, stop, restart and toggle HDR. Generate with:
+      #   ssh-keygen -t ed25519 -N '' -C picamera-monitor -f secrets/monitor_ed25519
+      - ./secrets/monitor_ed25519:/root/.ssh/monitor_ed25519:ro
     environment:
       - NODE_ENV=production
       - CONFIG_FILE=/app/config.yaml
@@ -26,6 +30,10 @@ services:
       - traefik.http.routers.picamera-monitor.tls=true
       - traefik.http.routers.picamera-monitor.tls.certresolver=lets-encrypt
       - traefik.http.services.picamera-monitor.loadbalancer.server.port=3000
+      # The dashboard can stop the cameras: it must never be reachable without a password.
+      # Value from: htpasswd -nbB <user> '<password>'   — and double every $ in the hash.
+      - traefik.http.middlewares.cams-auth.basicauth.users=<user>:<bcrypt hash with $$ doubled>
+      - traefik.http.routers.picamera-monitor.middlewares=cams-auth
     networks:
       - web
 

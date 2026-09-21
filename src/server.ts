@@ -3,6 +3,7 @@ import path from 'path';
 import https from 'https';
 import http from 'http';
 import { loadConfig } from './config.js';
+import { sameSiteAction } from './guard.js';
 import { startPolling, pollOnce } from './poller.js';
 import { runAction } from './ssh.js';
 import { renderPage, renderStatusFragment, renderPanelBody } from './views.js';
@@ -92,6 +93,7 @@ app.get('/api/cameras', (_req, res) => {
 
 // ── Control actions ───────────────────────────────────────────────────────────
 app.post('/api/:id/action/:action', async (req, res) => {
+  if (!sameSiteAction(req.headers)) return res.status(403).send('Forbidden');
   const state = states.get(req.params.id);
   if (!state) return res.status(404).send('Camera not found');
 

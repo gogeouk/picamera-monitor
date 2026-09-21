@@ -9,6 +9,12 @@ export interface CameraConfig {
     port: number;
     username: string;
     private_key: string;
+    /**
+     * The Pi's SSH host key fingerprints, as printed by `ssh-keygen -lf`
+     * ("SHA256:..."). Connections to anything else are refused. Read them on the
+     * Pi itself: `ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub`.
+     */
+    host_keys: string[];
   };
   pi: {
     service: string;
