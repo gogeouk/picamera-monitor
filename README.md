@@ -15,7 +15,7 @@ A dashboard for monitoring and controlling [picamera-streamer](https://github.co
 
 - Node.js 20+
 - SSH key access to each Pi (password auth not supported)
-- Each Pi running [picamera-streamer](https://github.com/gogeouk/picamera-streamer) ≥ `60b938a` (adds the `/status` endpoint)
+- Each Pi running [picamera-streamer](https://github.com/gogeouk/picamera-streamer) ≥ `8d15d0d` (adds the `/status` endpoint)
 
 ## Setup
 

@@ -20,6 +20,8 @@ name: picamera-monitor
 
 services:
   picamera-monitor:
+    # Tagged with the commit it was built from: 99585df, which is 5385e87 since the
+    # history rewrite of 24 Sep 2026 (hostnames and addresses taken out of every commit).
     image: picamera-monitor:99585df
     container_name: picamera-monitor
     restart: unless-stopped
