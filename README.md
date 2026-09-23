@@ -83,3 +83,8 @@ The server also exposes a simple JSON API for external consumers:
 | `POST /api/:id/action/restart` | Restart the service |
 | `POST /api/:id/action/hdr_on` | Enable HDR and restart |
 | `POST /api/:id/action/hdr_off` | Disable HDR and restart |
+
+## Licence
+
+[AGPL-3.0](LICENSE). You may run, modify and redistribute this freely. If you run a modified
+version as a network service, you must publish your modifications.
