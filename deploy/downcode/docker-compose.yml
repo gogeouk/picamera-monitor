@@ -1,0 +1,55 @@
+# picamera-monitor (cams.gogeo.uk) on downcode. Lives at
+# ~/docker/picamera-monitor/docker-compose.yml on the box — the only compose file
+# there (DEPLOYMENT-POLICY §6: the second file on ontoast is how an auth change once
+# went to the wrong place). Moved from ontoast in September 2026 (Phase 2 of the
+# move to downcode).
+#
+# Laid out by the box's own rules (~/docker/DEPLOYMENT-POLICY.md, /opt/ops/SECURITY.md):
+#   - state under /data/picamera-monitor/, bind mounts only:
+#       config.yaml             the cameras, with their pinned SSH host keys (never in git)
+#       ssh/monitor_ed25519     this box's own key, accepted on each Pi only as
+#                               restrict,from="<downcode>",command="…/monitor-gate.sh"
+#   - monitor-ingress only; nothing publishes a port; pinned image; limited
+#   - .env beside this file (600, never committed): CAMS_HOST, and CAMS_BASIC_AUTH,
+#     the bcrypt htpasswd line single-quoted so compose leaves its $ signs alone
+#
+# Certificates: no certresolver until cams.gogeo.uk resolves to this box (SECURITY.md
+# rule 10). Add traefik.http.routers.picamera-monitor.tls.certresolver=leresolver
+# after the DNS flip.
+
+name: picamera-monitor
+
+services:
+  picamera-monitor:
+    image: picamera-monitor:99585df
+    container_name: picamera-monitor
+    restart: unless-stopped
+    volumes:
+      - /data/picamera-monitor/config.yaml:/app/config.yaml:ro
+      - /data/picamera-monitor/ssh/monitor_ed25519:/root/.ssh/monitor_ed25519:ro
+    environment:
+      - NODE_ENV=production
+      - CONFIG_FILE=/app/config.yaml
+    networks: [monitor-ingress]
+    labels:
+      - traefik.enable=true
+      - traefik.docker.network=monitor-ingress
+      - traefik.http.routers.picamera-monitor.rule=Host(`${CAMS_HOST:?set CAMS_HOST in .env}`)
+      - traefik.http.routers.picamera-monitor.entrypoints=websecure
+      - traefik.http.routers.picamera-monitor.tls=true
+      - traefik.http.routers.picamera-monitor.middlewares=cams-auth
+      - traefik.http.middlewares.cams-auth.basicauth.users=${CAMS_BASIC_AUTH:?set CAMS_BASIC_AUTH in .env}
+      # Plain HTTP only redirects; this box has no global redirect.
+      - traefik.http.routers.picamera-monitor-http.rule=Host(`${CAMS_HOST}`)
+      - traefik.http.routers.picamera-monitor-http.entrypoints=web
+      - traefik.http.routers.picamera-monitor-http.middlewares=cams-https-redirect
+      - traefik.http.middlewares.cams-https-redirect.redirectscheme.scheme=https
+      - traefik.http.middlewares.cams-https-redirect.redirectscheme.permanent=true
+      - traefik.http.services.picamera-monitor.loadbalancer.server.port=3000
+    deploy:
+      resources:
+        limits: { cpus: "0.5", memory: 256M }
+
+networks:
+  monitor-ingress:
+    external: true
