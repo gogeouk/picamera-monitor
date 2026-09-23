@@ -13,9 +13,8 @@
 #   - .env beside this file (600, never committed): CAMS_HOST, and CAMS_BASIC_AUTH,
 #     the bcrypt htpasswd line single-quoted so compose leaves its $ signs alone
 #
-# Certificates: no certresolver until cams.gogeo.uk resolves to this box (SECURITY.md
-# rule 10). Add traefik.http.routers.picamera-monitor.tls.certresolver=leresolver
-# after the DNS flip.
+# Certificates: Let's Encrypt through Traefik's leresolver, added once cams.gogeo.uk
+# resolved to this box (Lee's flip, 23 Sep 2026; SECURITY.md rule 10).
 
 name: picamera-monitor
 
@@ -40,6 +39,7 @@ services:
       - traefik.http.routers.picamera-monitor.rule=Host(`${CAMS_HOST:?set CAMS_HOST in .env}`)
       - traefik.http.routers.picamera-monitor.entrypoints=websecure
       - traefik.http.routers.picamera-monitor.tls=true
+      - traefik.http.routers.picamera-monitor.tls.certresolver=leresolver
       - traefik.http.routers.picamera-monitor.middlewares=cams-auth
       - traefik.http.middlewares.cams-auth.basicauth.users=${CAMS_BASIC_AUTH:?set CAMS_BASIC_AUTH in .env}
       # Plain HTTP only redirects; this box has no global redirect.
