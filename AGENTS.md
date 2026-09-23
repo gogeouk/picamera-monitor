@@ -1,5 +1,9 @@
 # AGENTS.md — picamera-monitor
 
+> **Retiring.** The Pis are to report their own health over MQTT, publish-only, and gogeo's
+> logged-in section will show it. Then this dashboard, its key on the Pis and its deployment
+> go (gogeo's roadmap, Steps 5–7), and this repo is archived. Fix what breaks; do not extend it.
+
 ## What this project is
 
 A Node.js/TypeScript web dashboard for monitoring and controlling one or more [picamera-streamer](https://github.com/gogeouk/picamera-streamer) instances running on Raspberry Pis. It shows live MJPEG streams alongside auto-refreshed status panels and provides SSH-based control buttons (stop / start / restart / HDR on/off).
@@ -25,9 +29,9 @@ docker-compose.yml   — Mounts ./config.yaml and ~/.ssh/id_ed25519 as read-only
 
 **No frontend framework.** The UI uses [HTMX](https://htmx.org/) for partial page updates (status fragments refresh every 5s, action buttons swap in results inline). No build step, no bundler, no React overhead.
 
-**SSH for control, not an API on the Pi.** Control commands (start/stop/restart, HDR toggle) run via SSH directly against `systemctl` and `sed` on the Pi's `.env` file. This avoids adding any control surface to the streamer itself and works with the existing SSH key infrastructure.
+**SSH for control, not an API on the Pi.** Control commands (start/stop/restart, HDR toggle) run over SSH as verbs of the Pi's `monitor-gate.sh` (see *SSH* below), which runs `systemctl` itself. This avoids adding any control surface to the streamer and works with the existing SSH key infrastructure.
 
-**HDR toggle pattern.** HDR state lives in the Pi's `.env` file as `HDR=1`/`HDR=0`. The `hdr_on`/`hdr_off` actions stop the service, `sed` the env file, then start the service. The streamer runs `v4l2-ctl` automatically at startup when `HDR=1`, so a single restart is sufficient — no separate stop/v4l2/start sequence needed.
+**HDR toggle pattern.** HDR is a systemd drop-in on the Pi (`picamera.service.d/hdr.conf`, `Environment=HDR=1`), not the `.env` file. The gate's `hdr-on` writes it and restarts the service, and `hdr-off` removes it and restarts. The streamer runs `v4l2-ctl` itself at startup when `HDR=1`, so a single restart is enough.
 
 **Self-signed certs tolerated.** The poller uses `rejectUnauthorized: false` when fetching the Pi's `/status` endpoint. This is intentional: the Pi cert is Let's Encrypt but may be self-signed in dev; the Pi streams are internal infrastructure not first-party API calls.
 
@@ -59,13 +63,12 @@ weather site — so they stay in responses deliberately.
 
 **SSH, since 2026-09-21:**
 
-- **The dashboard has its own key**, `secrets/monitor_ed25519` on the server (gitignored). Until then it mounted lee's personal key, which has passwordless root on both Pis, into this web-facing container.
-- **On the Pis that key is fenced** by `monitor-gate.sh` (in picamera-streamer), a forced command in `authorized_keys`. It can run `probe`, `start`, `stop`, `restart`, `hdr-on` and `hdr-off`, nothing else. `ssh.ts` therefore sends those verbs, never shell. A new ability means a new verb in the gate.
+- **The dashboard has its own key**, mounted from the server (`/data/picamera-monitor/ssh/` in production, `secrets/` locally; never committed). Until then it mounted lee's personal key, which has passwordless root on both Pis, into this web-facing container.
+- **On the Pis that key is fenced** by `monitor-gate.sh` (in picamera-streamer), a forced command in `authorized_keys`, and accepted only from the server's address (`from=`). It can run `probe`, `start`, `stop`, `restart`, `hdr-on` and `hdr-off`, nothing else. `ssh.ts` therefore sends those verbs, never shell. A new ability means a new verb in the gate.
 - **Host keys are pinned** (`ssh.host_keys` in `config.yaml`). No pins means no connection.
 - **Actions refuse cross-site requests** (`src/guard.ts`): browsers resend a saved Basic Auth password to this site even when another website triggers the request, so the action route insists on HTMX's `HX-Request` header and a same-origin `Origin`.
 
 **Still outstanding:** HTMX is loaded from unpkg without a subresource-integrity hash.
-disables SSH host key verification entirely.
 
 ## Development
 
@@ -90,24 +93,12 @@ Add a new entry to `config.yaml` following the structure in `config.example.yaml
 
 ## Where this is deployed
 
-`cams.gogeo.uk` runs on **`<old-server>`** (`<old-server-ip>`) — *not* `<other-server>`, which is a
-separate Dokku box. Straight Docker + Traefik v2.2 there.
-
-| | |
-|---|---|
-| Host | `<old-server>` (in `~/.ssh/config`, key auth) |
-| Directory | `/home/lee/docker/picamera-monitor` |
-| Compose file | `docker-compose.prod.yml` |
-| Remote | `origin` → `github.com/gogeouk/picamera-monitor`, tracking `main` |
-
-Deploy:
-
-```bash
-ssh <old-server> 'cd /home/lee/docker/picamera-monitor && git pull --ff-only \
-  && docker compose -f docker-compose.prod.yml up -d --build'
-```
-
-`config.yaml` and the SSH key are mounted volumes and are not touched by a rebuild.
+Since 23 Sep 2026 on the gogeo VPS, as a single compose file:
+[deploy/downcode/docker-compose.yml](deploy/downcode/docker-compose.yml), whose header describes the
+layout (state in bind mounts under `/data`, Traefik in front with basic auth, pinned image,
+resource limits). There is no checkout on the server: the image is built there from an archive
+of a pushed commit and tagged with its short hash, then the tag in the compose file is updated.
+`config.yaml` and the SSH key are bind mounts and are not touched by a rebuild.
 
 ## Production
 
@@ -123,4 +114,4 @@ The Docker image does not bake in config or keys — they are mounted as read-on
 
 Control actions call `sudo systemctl` on the Pi. The SSH user must have passwordless sudo for `systemctl` commands, or the `picamera.service` must be owned by that user. In our setup `lee` has passwordless sudo on both Pis.
 
-HDR actions also call `sed -i` on the `.env` file — the SSH user needs write access to that file (it's in the user's home directory so this is fine by default).
+HDR actions write or remove a systemd drop-in through `sudo` in the gate, so the same passwordless sudo covers them.
