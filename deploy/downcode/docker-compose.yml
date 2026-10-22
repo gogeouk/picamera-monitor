@@ -20,9 +20,8 @@ name: picamera-monitor
 
 services:
   picamera-monitor:
-    # Tagged with the commit it was built from: 99585df, which is 5385e87 since the
-    # history rewrite of 24 Sep 2026 (hostnames and addresses taken out of every commit).
-    image: picamera-monitor:99585df
+    # Tagged with the commit it was built from: Node 22.23.4, 22 Oct 2026.
+    image: picamera-monitor:1d5a0b2
     container_name: picamera-monitor
     restart: unless-stopped
     # node as PID 1 ignores SIGTERM, so a stop waited 10 s and was killed (137). An
